@@ -1,19 +1,21 @@
-import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { ImageGalleryItemLi } from './ImageGalleryItem.styled';
+import ImageGalleryItemStyled from './ImageGalleryItem.styled';
 
-export class ImageGalleryItem extends Component {
-  render() {
-    return (
-      <ImageGalleryItemLi onClick={this.props.showModal}>
-        <img src={this.props.smallImg} alt={this.props.alt} />
-      </ImageGalleryItemLi>
-    );
-  }
-}
+const ImageGalleryItem = ({ image, onOpenModal }) => {
+  const handleClick = () => {
+    onOpenModal(image);
+  };
 
-ImageGalleryItem.propTypes = {
-  smallImg: PropTypes.string.isRequired,
-  alt: PropTypes.string.isRequired,
+  return (
+    <ImageGalleryItemStyled>
+      <img src={image.webformatURL} alt={image.alt} onClick={handleClick} />
+    </ImageGalleryItemStyled>
+  );
 };
 
+ImageGalleryItem.propTypes = {
+  image: PropTypes.object.isRequired,
+  onOpenModal: PropTypes.func.isRequired,
+};
+
+export default ImageGalleryItem;

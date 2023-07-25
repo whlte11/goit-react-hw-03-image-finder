@@ -1,9 +1,5 @@
 import styled from 'styled-components';
 
-/*
- * Стили компонента Modal
- */
-
 export const Overlay = styled.div`
   position: fixed;
   top: 0;
@@ -17,7 +13,15 @@ export const Overlay = styled.div`
   z-index: 1200;
 `;
 
-export const ModalImg = styled.div`
+export const ModalContent = styled.div`
   max-width: calc(100vw - 48px);
   max-height: calc(100vh - 24px);
 `;
+
+export const ModalImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+`;
+
+

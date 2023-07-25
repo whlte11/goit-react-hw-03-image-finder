@@ -1,47 +1,140 @@
 import React, { Component } from 'react';
-import { ToastContainer } from 'react-toastify';
+import PropTypes from 'prop-types';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Wrapper } from './App.styled';
+import { fetchImages } from 'utils/fetchImages';
+import Searchbar from './Searchbar/Searchbar';
+import ImageGallery from './ImageGallery/ImageGallery';
+import Button from './Button/Button';
+import Loader from './Loader/Loader';
+import Modal from './Modal/Modal';
+import { AppStyled } from './App.styled';
 
-import { Searchbar } from 'components/searchbar/Searchbar';
-import { ImageGallery } from 'components/imageGallery/ImageGallery';
-import { Modal } from 'components/modal/Modal';
-
-export class App extends Component {
+class App extends Component {
   state = {
-    searchQuery: '',
-    isShowModal: false,
-    modalImage: '',
+    images: [],
+    currentPage: 1,
+    query: '',
+    isLoading: false,
+    selectedImage: null,
+    totalCount: 0,
   };
 
-  handleFormSubmit = searchQuery => {
-    this.setState({ searchQuery });
+  galleryRef = null;
+
+  componentDidMount() {
+    this.galleryRef = React.createRef();
+  }
+
+  handleSearchSubmit = async query => {
+    this.setState(
+      {
+        images: [],
+        currentPage: 1,
+        query,
+        isLoading: true,
+      },
+      async () => {
+        try {
+          const images = await fetchImages(query, 1);
+
+          if (images.length === 0 && images.length <= 12) {
+            this.setState({ isLoading: false });
+            this.notify('No images found.', this.state.totalCount);
+          } else {
+            const totalCount = this.state.images.length;
+            this.notify('Loaded first images.', totalCount + images.length);
+            
+          }
+          this.setState({ images });
+        } catch (error) {
+          this.notify('Invalid request.', this.state.totalCount);
+          this.setState({ error: error.message });
+        }
+
+        this.setState({ isLoading: false });
+      }
+    );
   };
 
-  showModal = largeImageURL => {
-    this.setState({ isShowModal: true, modalImage: largeImageURL });
+  handleLoadMore = async () => {
+    const { currentPage, query, images } = this.state;
+    const nextPage = currentPage + 1;
+
+    this.setState({ isLoading: true });
+
+    try {
+      const images = await fetchImages(query, nextPage);
+      if (images.length === 0 && images.length <= 12) {
+        this.notify('No more images found.', this.state.images.length);
+        this.setState({ isLoading: false });
+
+        return;
+      }
+      this.setState(prevState => ({
+        images: [...prevState.images, ...images],
+        currentPage: nextPage,
+      }));
+    } catch (error) {
+      this.setState({ error: error.message });
+    }
+
+    this.setState({ isLoading: false });
+    if (this.galleryRef && this.galleryRef.current) {
+      this.galleryRef.current.scrollToNewItems();
+    }
+
+    const totalCount = this.state.images.length;
+    this.notify('Loaded next images.', totalCount + images.length);
   };
 
-  closeModal = () => {
-    this.setState({ isShowModal: false });
+  notify = (message, totalCount) => {
+    toast(`${message} Found: ${totalCount} pcs.`);
+  };
+
+
+  handleOpenModal = selectedImage => {
+    this.setState({ selectedImage });
+  };
+
+  handleCloseModal = () => {
+    this.setState({ selectedImage: null });
   };
 
   render() {
+    const { images, isLoading, selectedImage } = this.state;
+    const isShowButton = images.length > 0 && !isLoading && images.length >= 12 && images.length % 12 === 0;
+
     return (
-      <Wrapper>
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        <ImageGallery
-          showModal={this.showModal}
-          searchQuery={this.state.searchQuery}
-        />
-        {this.state.isShowModal && (
-          <Modal
-            closeModal={this.closeModal}
-            modalImage={this.state.modalImage}
+      <>
+        <ToastContainer />
+        <Searchbar onSubmit={this.handleSearchSubmit} />
+        <AppStyled>
+          <ImageGallery
+            images={images}
+            onOpenModal={this.handleOpenModal}
+            ref={this.galleryRef}
           />
-        )}
-        <ToastContainer autoClose={3000} theme="colored" />
-      </Wrapper>
+          {isShowButton && <Button onClick={this.handleLoadMore} />}
+          {isLoading && <Loader />}
+          {selectedImage && (
+            <Modal
+              largeImageURL={selectedImage.largeImageURL}
+              onClose={this.handleCloseModal}
+            />
+          )}
+        </AppStyled>
+      </>
     );
   }
 }
+
+App.propTypes = {
+  images: PropTypes.arrayOf(PropTypes.object),
+  currentPage: PropTypes.number,
+  query: PropTypes.string,
+  isLoading: PropTypes.bool,
+  selectedImage: PropTypes.object,
+};
+
+export default App;
